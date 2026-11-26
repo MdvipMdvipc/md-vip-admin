@@ -34,3 +34,406 @@ border-radius:8px;
 </div>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MD VIP Services</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080d18;color:#f5f7ff;font-family:Arial,sans-serif}
+header{padding:22px 16px;text-align:center;background:#111a2c;border-bottom:1px solid #263653}
+header h1{color:#55aaff;margin:0}
+header p{color:#b7c5dc}
+main{max-width:900px;margin:auto;padding:16px}
+.card{background:#111a2c;border:1px solid #263653;border-radius:16px;padding:18px;margin:16px 0}
+button{background:#1685ff;color:white;border:0;padding:11px 15px;border-radius:9px;cursor:pointer;margin:4px}
+input,textarea{width:100%;padding:12px;margin:8px 0;background:#080d18;color:white;border:1px solid #344966;border-radius:9px}
+.service{background:#0b1423;padding:15px;border:1px solid #293c58;border-radius:12px;margin:12px 0}
+.price{color:#62b2ff;font-size:20px;font-weight:bold}
+.hidden{display:none}
+#qr{max-width:250px;max-height:250px;width:100%;display:block;margin:15px auto;border-radius:12px}
+footer{text-align:center;color:#8b9bb5;padding:25px}
+</style>
+</head>
+<body>
+
+<header>
+<h1>MD VIP SERVICES</h1>
+<p>Services • Price • Payment</p>
+</header>
+
+<main>
+
+<div class="card">
+<h2>Available Services</h2>
+<div id="services"></div>
+</div>
+
+<div class="card">
+<h2>Order Service</h2>
+<input id="customer" placeholder="Customer name">
+<input id="selected" placeholder="Service name">
+<input id="amount" placeholder="Price" readonly>
+<button onclick="makeOrder()">Order Summary</button>
+<div id="orderResult"></div>
+</div>
+
+<div class="card">
+<h2>QR Payment</h2>
+<p>Payment QR यहाँ दिखाई देगा</p>
+<img id="qr" class="hidden" alt="Payment QR">
+<p id="qrMessage">Admin द्वारा QR सेट करने पर यहाँ दिखेगा।</p>
+</div>
+
+<div class="card">
+<h2>Admin Mode</h2>
+<button onclick="adminToggle()">Admin Controls खोलें / बंद करें</button>
+
+<div id="admin" class="hidden">
+<h3>Add Service</h3>
+<input id="newName" placeholder="Service name">
+<input id="newPrice" type="number" placeholder="Price ₹">
+<textarea id="newDesc" placeholder="Service description"></textarea>
+<button onclick="addService()">Add Service</button>
+
+<h3>QR Image URL</h3>
+<input id="qrUrl" placeholder="QR image URL">
+<button onclick="saveQR()">Save QR</button>
+
+<h3>Manage Services</h3>
+<div id="manage"></div>
+</div>
+</div>
+
+</main>
+
+<footer>MD VIP SERVICES</footer>
+
+<script>
+const defaultServices=[
+{name:"Premium Service",price:100,desc:"Premium service description"},
+{name:"VIP Service",price:200,desc:"VIP service description"}
+];
+
+function loadServices(){
+try{return JSON.parse(localStorage.getItem("mdservices"))||defaultServices}
+catch(e){return defaultServices}
+}
+let data=loadServices();
+
+function save(){
+localStorage.setItem("mdservices",JSON.stringify(data));
+render();
+}
+
+function render(){
+const box=document.getElementById("services");
+box.innerHTML="";
+data.forEach((s,i)=>{
+box.innerHTML+=`
+<div class="service">
+<h3>${escapeHTML(s.name)}</h3>
+<p>${escapeHTML(s.desc)}</p>
+<div class="price">₹${Number(s.price)}</div>
+<button onclick="choose(${i})">Select Service</button>
+</div>`;
+});
+renderManage();
+}
+
+function choose(i){
+document.getElementById("selected").value=data[i].name;
+document.getElementById("amount").value="₹"+data[i].price;
+document.getElementById("orderResult").innerHTML="";
+}
+
+function makeOrder(){
+const name=document.getElementById("customer").value.trim();
+const service=document.getElementById("selected").value.trim();
+const price=document.getElementById("amount").value;
+if(!name||!service||!price){
+alert("Name aur service bharein");
+return;
+}
+document.getElementById("orderResult").innerHTML=
+`<div class="service">
+<h3>Order Summary</h3>
+<p>Name: ${escapeHTML(name)}</p>
+<p>Service: ${escapeHTML(service)}</p>
+<p>Price: ${escapeHTML(price)}</p>
+<p>Order ID: MD-${Date.now()}</p>
+<p>यह ऑर्डर सारांश केवल इस स्क्रीन पर बनाया गया है। इसे सर्वर पर भेजा नहीं गया है।</p>
+</div>`;
+}
+
+function adminToggle(){
+document.getElementById("admin").classList.toggle("hidden");
+}
+
+function addService(){
+const n=document.getElementById("newName").value.trim();
+const p=document.getElementById("newPrice").value;
+const d=document.getElementById("newDesc").value.trim();
+if(!n||p===""){
+alert("Name aur price bharein");
+return;
+}
+data.push({name:n,price:Number(p),desc:d});
+save();
+document.getElementById("newName").value="";
+document.getElementById("newPrice").value="";
+document.getElementById("newDesc").value="";
+}
+
+function removeService(i){
+if(confirm("Is service ko delete karein?")){
+data.splice(i,1);
+save();
+}
+}
+
+function renderManage(){
+const m=document.getElementById("manage");
+if(!m)return;
+m.innerHTML="";
+data.forEach((s,i)=>{
+m.innerHTML+=`<div class="service">
+${escapeHTML(s.name)} — ₹${Number(s.price)}
+<button onclick="removeService(${i})">Delete</button>
+</div>`;
+});
+}
+
+function saveQR(){
+const url=document.getElementById("qrUrl").value.trim();
+if(!url){
+alert("QR image URL bharein");
+return;
+}
+localStorage.setItem("mdqr",url);
+showQR(url);
+}
+
+function showQR(url){
+const img=document.getElementById("qr");
+img.src=url;
+img.classList.remove("hidden");
+document.getElementById("qrMessage").textContent="QR code ko scan karne se pehle payment details verify karein.";
+}
+
+function escapeHTML(s){
+return String(s).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+const savedQR=localStorage.getItem("mdqr");
+if(savedQR)showQR(savedQR);
+
+render();
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MD VIP Services</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080d18;color:#f5f7ff;font-family:Arial,sans-serif}
+header{padding:22px 16px;text-align:center;background:#111a2c;border-bottom:1px solid #263653}
+header h1{color:#55aaff;margin:0}
+header p{color:#b7c5dc}
+main{max-width:900px;margin:auto;padding:16px}
+.card{background:#111a2c;border:1px solid #263653;border-radius:16px;padding:18px;margin:16px 0}
+button{background:#1685ff;color:white;border:0;padding:11px 15px;border-radius:9px;cursor:pointer;margin:4px}
+input,textarea{width:100%;padding:12px;margin:8px 0;background:#080d18;color:white;border:1px solid #344966;border-radius:9px}
+.service{background:#0b1423;padding:15px;border:1px solid #293c58;border-radius:12px;margin:12px 0}
+.price{color:#62b2ff;font-size:20px;font-weight:bold}
+.hidden{display:none}
+#qr{max-width:250px;max-height:250px;width:100%;display:block;margin:15px auto;border-radius:12px}
+footer{text-align:center;color:#8b9bb5;padding:25px}
+</style>
+</head>
+<body>
+
+<header>
+<h1>MD VIP SERVICES</h1>
+<p>Services • Price • Payment</p>
+</header>
+
+<main>
+
+<div class="card">
+<h2>Available Services</h2>
+<div id="services"></div>
+</div>
+
+<div class="card">
+<h2>Order Service</h2>
+<input id="customer" placeholder="Customer name">
+<input id="selected" placeholder="Service name">
+<input id="amount" placeholder="Price" readonly>
+<button onclick="makeOrder()">Order Summary</button>
+<div id="orderResult"></div>
+</div>
+
+<div class="card">
+<h2>QR Payment</h2>
+<p>Payment QR यहाँ दिखाई देगा</p>
+<img id="qr" class="hidden" alt="Payment QR">
+<p id="qrMessage">Admin द्वारा QR सेट करने पर यहाँ दिखेगा।</p>
+</div>
+
+<div class="card">
+<h2>Admin Mode</h2>
+<button onclick="adminToggle()">Admin Controls खोलें / बंद करें</button>
+
+<div id="admin" class="hidden">
+<h3>Add Service</h3>
+<input id="newName" placeholder="Service name">
+<input id="newPrice" type="number" placeholder="Price ₹">
+<textarea id="newDesc" placeholder="Service description"></textarea>
+<button onclick="addService()">Add Service</button>
+
+<h3>QR Image URL</h3>
+<input id="qrUrl" placeholder="QR image URL">
+<button onclick="saveQR()">Save QR</button>
+
+<h3>Manage Services</h3>
+<div id="manage"></div>
+</div>
+</div>
+
+</main>
+
+<footer>MD VIP SERVICES</footer>
+
+<script>
+const defaultServices=[
+{name:"Premium Service",price:100,desc:"Premium service description"},
+{name:"VIP Service",price:200,desc:"VIP service description"}
+];
+
+function loadServices(){
+try{return JSON.parse(localStorage.getItem("mdservices"))||defaultServices}
+catch(e){return defaultServices}
+}
+let data=loadServices();
+
+function save(){
+localStorage.setItem("mdservices",JSON.stringify(data));
+render();
+}
+
+function render(){
+const box=document.getElementById("services");
+box.innerHTML="";
+data.forEach((s,i)=>{
+box.innerHTML+=`
+<div class="service">
+<h3>${escapeHTML(s.name)}</h3>
+<p>${escapeHTML(s.desc)}</p>
+<div class="price">₹${Number(s.price)}</div>
+<button onclick="choose(${i})">Select Service</button>
+</div>`;
+});
+renderManage();
+}
+
+function choose(i){
+document.getElementById("selected").value=data[i].name;
+document.getElementById("amount").value="₹"+data[i].price;
+document.getElementById("orderResult").innerHTML="";
+}
+
+function makeOrder(){
+const name=document.getElementById("customer").value.trim();
+const service=document.getElementById("selected").value.trim();
+const price=document.getElementById("amount").value;
+if(!name||!service||!price){
+alert("Name aur service bharein");
+return;
+}
+document.getElementById("orderResult").innerHTML=
+`<div class="service">
+<h3>Order Summary</h3>
+<p>Name: ${escapeHTML(name)}</p>
+<p>Service: ${escapeHTML(service)}</p>
+<p>Price: ${escapeHTML(price)}</p>
+<p>Order ID: MD-${Date.now()}</p>
+<p>यह ऑर्डर सारांश केवल इस स्क्रीन पर बनाया गया है। इसे सर्वर पर भेजा नहीं गया है।</p>
+</div>`;
+}
+
+function adminToggle(){
+document.getElementById("admin").classList.toggle("hidden");
+}
+
+function addService(){
+const n=document.getElementById("newName").value.trim();
+const p=document.getElementById("newPrice").value;
+const d=document.getElementById("newDesc").value.trim();
+if(!n||p===""){
+alert("Name aur price bharein");
+return;
+}
+data.push({name:n,price:Number(p),desc:d});
+save();
+document.getElementById("newName").value="";
+document.getElementById("newPrice").value="";
+document.getElementById("newDesc").value="";
+}
+
+function removeService(i){
+if(confirm("Is service ko delete karein?")){
+data.splice(i,1);
+save();
+}
+}
+
+function renderManage(){
+const m=document.getElementById("manage");
+if(!m)return;
+m.innerHTML="";
+data.forEach((s,i)=>{
+m.innerHTML+=`<div class="service">
+${escapeHTML(s.name)} — ₹${Number(s.price)}
+<button onclick="removeService(${i})">Delete</button>
+</div>`;
+});
+}
+
+function saveQR(){
+const url=document.getElementById("qrUrl").value.trim();
+if(!url){
+alert("QR image URL bharein");
+return;
+}
+localStorage.setItem("mdqr",url);
+showQR(url);
+}
+
+function showQR(url){
+const img=document.getElementById("qr");
+img.src=url;
+img.classList.remove("hidden");
+document.getElementById("qrMessage").textContent="QR code ko scan karne se pehle payment details verify karein.";
+}
+
+function escapeHTML(s){
+return String(s).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+const savedQR=localStorage.getItem("mdqr");
+if(savedQR)showQR(savedQR);
+
+render();
+</script>
+</body>
+</html>
